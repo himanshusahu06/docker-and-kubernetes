@@ -1,7 +1,6 @@
 # Docker
 
 ## Docker Commands
-
 ----
 
 ### docker run
@@ -36,7 +35,6 @@
 `docker run --rm -ti -p 45678:45678 -p 45679:45679 --name echo-server ubuntu:14.04 bash` (Delete docker container after stop)
 
 ## Docker Container Networking
-
 ---
 
 container can connect to host machine with host machine IP address.
@@ -54,7 +52,6 @@ e.g.:
 
 
 ## Docker Volumes
-
 ---
 
 
@@ -67,7 +64,6 @@ Can share volume either from host machine or from other container.
     * Shared volume will exist till no container is using it, even if container which created the volume dies.
 
 ## Docker Private Network
-
 ---
 
 
