@@ -1,0 +1,24 @@
+version: '3'
+services:
+  python-crud-server:
+    build: ./crud-server
+    ports:
+      - "5000:5000"
+    networks: 
+      - backend-db-network  # since this server communicates to database
+  mongodb-server:           # ip is not exposed so mongodb is only acessible within network
+    image: 'mongo:latest'
+    networks:
+      - backend-db-network
+    volumes:
+      - ./mongodata.dir:/data/db # this will persist mongo data in local directory
+networks:
+  backend-db-network: {}
+
+# servers
+# python-crud-server - api server that does some crud operations on database
+# middleware server - api layer that communicates to python server, aggregate the data and return the response
+
+# networks
+# backend-db-network - services that communcates to database will join this network
+# service-network - services that do not communcate to db will join to this netork
