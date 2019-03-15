@@ -1,0 +1,37 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: helloworld-deployment
+spec:
+  replicas: 3 # tells deployment to run 1 pod matching the selector
+  selector:
+    matchLabels:
+      app: helloworld
+  template: # pod templates
+    metadata:
+      labels:
+        app: helloworld
+        env: prod
+        author: himanshu
+        tier: ui
+        release-version: "1.0"
+    spec:
+      containers:
+        - name: helloworld
+          image: karthequian/helloworld:latest
+          ports:
+            - containerPort: 80
+          readinessProbe:  # when a container is ready to start accepting traffic
+            initialDelaySeconds: 5  # time to wait for pod to initialize
+            timeoutSeconds: 1    # timeout for health check api
+            httpGet:                   # health check api
+              path: /                  # api path
+              port: 80                 # api port
+          livenessProbe:  # periodic check to make sure container is healthy
+            initialDelaySeconds: 10 # delay between two checks
+            timeoutSeconds: 1    # timeout for health check api
+            failureThreshold: 2  # k8s will try failureThreshold times health check before restarting the pod
+            httpGet:                   # health check api
+              path: /                  # api path
+              port: 80                 # api port
+          
