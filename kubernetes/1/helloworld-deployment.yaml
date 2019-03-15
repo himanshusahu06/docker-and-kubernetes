@@ -1,0 +1,23 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: helloworld-deployment
+spec:
+  replicas: 3 # tells deployment to run 1 pod matching the selector
+  selector:
+    matchLabels:
+      app: helloworld2
+  template: # pod templates
+    metadata:
+      labels:
+        app: helloworld2
+        env: prod
+        author: himanshu
+        tier: ui
+        release-version: "1.0"
+    spec:
+      containers:
+        - name: helloworld
+          image: karthequian/helloworld:latest
+          ports:
+            - containerPort: 80
