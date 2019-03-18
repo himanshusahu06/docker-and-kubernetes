@@ -15,6 +15,7 @@ Pods are one or more docker application container. It has it's own network-ip an
 4. Failed - all container of pod are have exited with zero status code but at least one container has exited with non-zero status code.
 5. CrashLoopBackOff - pod is not able to restart and k8s is trying to restart it again and again.
 6. ContainerCreating - K8s is creating the container.
+6. ErrImagePull - K8s is unable to pull image from docker.
 
 ## Controllers
 Controller controls, monitor and manages the lifecycle of pods. It is useful in
@@ -168,19 +169,24 @@ $ kubectl scale --replicas={num_replicas} deploy/{deployment_name}
 ```
 The number of replicas(number of pods) for the deployment **deployment_name** will be changed from whatever their existing value is to **num_replicas**.
 
-### get deployment information
+### describe resources
+It is very useful to debug any resources.
 ```shell
-$ kubectl describe deployments
-
-Name:                   helloworld-deployment
+$ kubectl describe [deployments|pods|services|rs] {name}
+```
+ex. get deployment information
+```shell
+$ kubectl describe deployment helloworld-deployment
+Name:                   navbar-deployment
 Namespace:              default
-CreationTimestamp:      Fri, 15 Mar 2019 12:53:08 +0530
+CreationTimestamp:      Fri, 15 Mar 2019 16:24:56 +0530
 Labels:                 app=helloworld
                         author=himanshu
                         env=prod
                         release-version=1.0
                         tier=ui
-Annotations:            deployment.kubernetes.io/revision: 1
+Annotations:            deployment.kubernetes.io/revision: 3
+                        kubernetes.io/change-cause: kubectl create --filename=helloworld-black.yaml --record=true
 Selector:               app=helloworld
 Replicas:               3 desired | 3 updated | 3 total | 3 available | 0 unavailable
 StrategyType:           RollingUpdate
@@ -194,7 +200,7 @@ Pod Template:
            tier=ui
   Containers:
    helloworld:
-    Image:        karthequian/helloworld:latest
+    Image:        karthequian/helloworld:black
     Port:         80/TCP
     Host Port:    0/TCP
     Environment:  <none>
@@ -206,12 +212,22 @@ Conditions:
   Available      True    MinimumReplicasAvailable
   Progressing    True    NewReplicaSetAvailable
 OldReplicaSets:  <none>
-NewReplicaSet:   helloworld-deployment-6746cd7c6b (3/3 replicas created)
+NewReplicaSet:   navbar-deployment-f778cfd96 (3/3 replicas created)
 Events:
-  Type    Reason             Age   From                   Message
-  ----    ------             ----  ----                   -------
-  Normal  ScalingReplicaSet  70s   deployment-controller  Scaled up replica set helloworld-deployment-6746cd7c6b to 3
+  Type    Reason             Age                    From                   Message
+  ----    ------             ----                   ----                   -------
+  Normal  ScalingReplicaSet  8m17s                  deployment-controller  Scaled up replica set navbar-deployment-5f957545c7 to 1
+  Normal  ScalingReplicaSet  8m16s                  deployment-controller  Scaled down replica set navbar-deployment-f778cfd96 to 2
+  Normal  ScalingReplicaSet  8m16s                  deployment-controller  Scaled up replica set navbar-deployment-5f957545c7 to 2
+  Normal  ScalingReplicaSet  8m15s                  deployment-controller  Scaled down replica set navbar-deployment-f778cfd96 to 1
+  Normal  ScalingReplicaSet  8m15s                  deployment-controller  Scaled up replica set navbar-deployment-5f957545c7 to 3
+  Normal  ScalingReplicaSet  8m14s                  deployment-controller  Scaled down replica set navbar-deployment-f778cfd96 to 0
+  Normal  ScalingReplicaSet  6m54s                  deployment-controller  Scaled up replica set navbar-deployment-f778cfd96 to 1
+  Normal  ScalingReplicaSet  6m52s                  deployment-controller  Scaled down replica set navbar-deployment-5f957545c7 to 2
+  Normal  ScalingReplicaSet  6m51s (x2 over 9m38s)  deployment-controller  Scaled up replica set navbar-deployment-f778cfd96 to 3
+  Normal  ScalingReplicaSet  6m49s (x3 over 6m52s)  deployment-controller  (combined from similar events): Scaled down replica set navbar-deployment-5f957545c7 to 0
 ```
+
 
 ### list resources with labels
 ```shell
@@ -229,21 +245,213 @@ $ kubectl label pod/{pod_name} key-
 ```
 
 ### filter resources by labels
-label match
 ```shell
-$ kubectl get pods --selector key1=value1,key2=value2
+$ kubectl get pods --selector {filter}
 ```
-label inclusion
-```shell
-kubectl get pods --selector 'app in (helloworld2, helloworld)'
-```
-label exclusion
-```shell
-kubectl get pods --selector 'app notin (helloworld2, helloworld)'
-```
+filter can be:
+1. label match - `key1=value1,key2=value2`
+2. label inclusion `'key in (value1, value2)'`
+3. label exclusion `'key notin (value1, value2)'`
 
-### delete a resource with given label
+### delete resources by labels
 ```shell
-$ kubectl delete pods --selector {filter}
+$ kubectl delete [deployments|pods|services|rs] --selector {filter}
 ```
 filters are same as in above example.
+
+### Logging into pods
+you log into the containers not the pods. Thi command is almost similar to docker exec.
+```exec
+$ kubectl -ti exec <pod_name> -c <container_name> bash
+```
+You can omit **container name** if pod have only one container.
+
+
+## Passing Dynamic Configuration to pods using configmap
+1. create a configuration map
+	```shell
+	$ kubectl create configmap <map-name> <data-source>
+	```
+
+	ex:-
+	create from literal
+	```shell
+	$ kubectl create configmap <map-name> --from-literal=key1=value1 --from-literal=key2=value2
+	```
+	create from file
+	```shell
+	$ kubectl create configmap yo2 --from-file=a.config
+	configmap/yo2 created
+	$ kubectl describe configmaps/yo2
+	Name:         yo2
+	Namespace:    default
+	Labels:       <none>
+	Annotations:  <none>
+
+	Data
+	====
+	a.config:
+	----
+	enemies=aliens
+	lives=3
+	enemies.cheat=true
+	enemies.cheat.level=noGoodRotten
+	secret.code.passphrase=UUDDLRLRBABAS
+	secret.code.allowed=true
+	secret.code.lives=30
+
+	Events:  <none>
+	```
+
+2. apply this configmap in pod template of deployment yaml
+
+	```
+	apiVersion: extensions/v1beta1
+	kind: Deployment
+	metadata:
+	name: logreader-dynamic
+	spec:
+	replicas: 1
+	template:
+		metadata:
+		labels:
+			name: logreader-dynamic
+		spec:
+		containers:
+		- name: logreader
+			image: karthequian/reader:latest
+			env:
+			- name: log_level
+			valueFrom:
+				configMapKeyRef:
+				name: logger    # Read from a configmap called log-level
+				key: log_level  # Read the key called log_level
+	```
+
+https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/
+
+
+## Passing sensitive data to pods using secrets
+1. create secret (params of creating secret is same as configmap)
+	```shell
+	$ kubectl create secret generic <secret_name> --from-literal=key1=value1 --from-literal=key2=value2
+	```
+
+	ex:-
+	```shell
+	$ kubectl create secret generic my_secret --from-literal=api_key=1234567
+	```
+	describe secret `$ kubectl get secret my_secret -o yaml`
+	```
+	apiVersion: v1
+	data:
+		api_key: MTIzNDU2Nw==
+	kind: Secret
+	metadata:
+		creationTimestamp: "2019-03-18T06:26:34Z"
+		name: my-secret
+		namespace: default
+		resourceVersion: "35797"
+		selfLink: /api/v1/namespaces/default/secrets/my-secret
+		uid: c7183229-4946-11e9-81a4-080027afc910
+	type: Opaque
+	```
+
+2. use the secret within container
+	```
+	apiVersion: extensions/v1beta1
+	kind: Deployment
+	metadata:
+	name: secretreader
+	spec:
+	replicas: 1
+	template:
+		metadata:
+		labels:
+			name: secretreader
+		spec:
+		containers:
+		- name: secretreader
+			image: karthequian/secretreader:latest
+			env:				  # api_key will be availble as env
+			- name: api_key
+			valueFrom:
+				secretKeyRef:
+				name: my_secret   # Read from a secret called my_secret 
+				key: api_key      # Read the key called api_key
+	```
+https://kubernetes.io/docs/concepts/configuration/secret/
+
+## Jobs
+Jobs run a pod once and then stops. Output of jobs is persisted.
+
+1. Simple job (Job) - this runs once.
+	```
+	apiVersion: batch/v1
+	kind: Job
+	metadata:
+	name: finalcountdown
+	spec:
+	template:
+		metadata:
+		name: finalcountdown
+		spec:
+		containers:
+		- name: counter
+			image: busybox
+			command:
+			- bin/sh
+			- -c
+			- "for i in 9 8 7 6 5 4 3 2 1 ; do echo $i ; done"
+		restartPolicy: Never #could also be Always or OnFailure
+	```
+	get simple job details -
+	```shell
+	$ kubectl get jobs
+	NAME             COMPLETIONS   DURATION   AGE
+	finalcountdown   1/1           8s         73s
+	```
+	pod will be in `Complete` state after execution. you can get the output of jobs by running `kubectl logs <pod_name>`
+
+	https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
+
+2. Schedule a Job (CronJob) - runs periodically
+	```text
+	apiVersion: batch/v1beta1
+	kind: CronJob
+	metadata:
+	name: hellocron
+	spec:
+	schedule: "*/1 * * * *" #Runs every minute (cron syntax) or @hourly.
+	jobTemplate:
+	  spec:
+		template:
+		  spec:
+		  containers:
+		  - name: hellocron
+		    image: busybox
+		    args:
+		    - /bin/sh
+				- -c
+				- date; echo Hello from your Kubernetes cluster
+			restartPolicy: OnFailure #could also be Always or Never
+	suspend: false #Set to true if you want to suspend in the future
+	```
+
+	get cron job details -
+	```shell
+	$ kubectl get cronjobs
+	NAME        SCHEDULE      SUSPEND   ACTIVE   LAST SCHEDULE   AGE
+	hellocron   */1 * * * *   False     0        <none>          15s
+	```
+	pod will be in `Complete` state after execution. you can get the output of jobs by running `kubectl logs <pod_name>`
+
+	stop cron job - edit jobs by running `kubectl edit cronjobs/hellocron` and turn the `suspend` variable to `True`.
+
+	https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/
+
+
+----
+
+## Deamon sets
+YTD
