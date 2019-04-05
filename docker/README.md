@@ -210,20 +210,7 @@ Pushing the imager to hub:
 2. **Step 2:** push the image to hub
 3. You can push only image not the containers
 
-`docker tag <IMAGE_ID> <NAME_OF_IMAGE>:<VERSION_TO_PUSH>`
-
-`docker push <NAME_OF_NEW_IMAGE>:<VERSION_TO_PUSH>`
-
-
-
-
-
-
-
-
-
-
-
+https://docs.docker.com/v17.12/docker-cloud/builds/push-images/
 
 
 

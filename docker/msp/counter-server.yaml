@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: python-counter-server-service
+  labels:
+    k8s-app: counter
+spec:
+  type: LoadBalancer
+  selector:
+    run: counter
+  ports:
+    - protocol: TCP
+      port: 7890
+      targetPort: 7890
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-counter-server-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      run: counter
+  template:
+    metadata:
+      labels:
+        run: counter
+    spec:
+      containers:
+        - name: counter-server
+          image: himanshusahu06/sample-server-container:1.0.0
+          ports:
+            - containerPort: 7890

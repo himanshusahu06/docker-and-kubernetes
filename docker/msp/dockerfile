@@ -1,0 +1,11 @@
+FROM alpine:latest as pip-base
+RUN apk add python3
+RUN mkdir /code
+COPY requirements.txt code/requirements.txt
+RUN pip3 install -r /code/requirements.txt
+
+FROM alpine:latest as final-image
+COPY --from=pip-base /usr/lib/python3.6/site-packages /usr/lib/python3.6/site-packages
+ADD server.py /code/
+RUN apk add python3
+CMD python3 code/server.py
