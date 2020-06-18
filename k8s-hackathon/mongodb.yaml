@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  rvstore-orders-mongodb-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb-server
+  template:
+    metadata:
+      labels:
+        app: mongodb-server
+    spec:
+      containers:
+      - image: mongo:latest
+        name:  mongodb
+        env:
+          - name:  MONGO_INITDB_ROOT_USERNAME
+            value:  mongoadmin
+          - name:  MONGO_INITDB_ROOT_PASSWORD
+            value:  secret
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: rvstore-orders-mongodb
+spec:
+  selector:
+    app: mongodb-server
+  ports:
+  - protocol: TCP
+    port: 27017
+    targetPort: 27017
+  type: ClusterIP
