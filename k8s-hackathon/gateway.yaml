@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  rvstore-api-gateway-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - image: vergeops/k8s-rvstore-api-gateway:1.0
+        name:  rvstore-api-gateway
+        env:
+        - name:  SPRING_PROFILES_ACTIVE
+          value:  compose
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: rvstore-api-gateway
+spec:
+  selector:
+    app: api-gateway
+  ports:
+  - protocol: TCP
+    port: 9000
+    nodePort: 30080
+  type: NodePort
