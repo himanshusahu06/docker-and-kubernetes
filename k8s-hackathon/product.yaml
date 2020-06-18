@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rvstore-product-api-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-api
+  template:
+    metadata:
+      labels:
+        app: product-api
+    spec:
+      containers:
+      - image: vergeops/k8s-rvstore-product-api:1.0
+        name:  product-api
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: rvstore-product-api
+spec:
+  selector:
+    app: product-api
+  ports:
+  - protocol: TCP
+    port: 9001
+  type: ClusterIP
